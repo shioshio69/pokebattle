@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ポケカバトルマネージャー</title>
+<link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=M+PLUS+Rounded+1c:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-dark: #0a0a1a;
+  --bg-card: #141428;
+  --accent-gold: #ffd700;
+  --accent-red: #ff4757;
+  --accent-blue: #3742fa;
+  --accent-green: #2ed573;
+  --accent-purple: #a855f7;
+  --text-primary: #f1f1f1;
+  --text-secondary: #8888aa;
+  --border-subtle: rgba(255,255,255,0.08);
+  --glow-gold: 0 0 20px rgba(255,215,0,0.3);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background: var(--bg-dark); color: var(--text-primary);
+  font-family: 'M PLUS Rounded 1c', sans-serif;
+  min-height: 100vh; overflow-x: hidden;
+}
+body::before {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background:
+    radial-gradient(ellipse at 20% 20%, rgba(55,66,250,0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgba(168,85,247,0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgba(255,215,0,0.03) 0%, transparent 70%);
+}
+.app { position: relative; z-index: 1; max-width: 480px; margin: 0 auto; padding: 16px; padding-bottom: 100px; }
+
+.header { text-align: center; padding: 24px 0 20px; }
+.header h1 {
+  font-family: 'Dela Gothic One', cursive; font-size: 1.5rem;
+  background: linear-gradient(135deg, var(--accent-gold), #ffaa00, var(--accent-gold));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  letter-spacing: 0.05em; filter: drop-shadow(0 0 10px rgba(255,215,0,0.3));
+}
+.header .subtitle { font-size: 0.7rem; color: var(--text-secondary); margin-top: 4px; letter-spacing: 0.15em; }
+
+.section {
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: 16px; padding: 16px; margin-bottom: 16px;
+  animation: fadeUp 0.4s ease-out; overflow: hidden;
+}
+@keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+.section-title {
+  font-family: 'Dela Gothic One', cursive; font-size: 0.85rem;
+  color: var(--accent-gold); margin-bottom: 14px;
+  display: flex; align-items: center; gap: 8px;
+}
+.section-title .icon { font-size: 1.1rem; }
+
+.input-field {
+  width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-subtle);
+  border-radius: 10px; padding: 12px 14px; color: var(--text-primary);
+  font-family: inherit; font-size: 0.95rem; outline: none; transition: border-color 0.2s;
+}
+.input-field:focus { border-color: var(--accent-gold); }
+.input-label { font-size: 0.7rem; color: var(--text-secondary); margin-bottom: 6px; }
+
+.player-input-row { display: flex; gap: 6px; margin-bottom: 8px; align-items: flex-end; }
+.player-input-row input[type="text"] {
+  width: 100%; min-width: 0;
+  background: rgba(255,255,255,0.05); border: 1px solid var(--border-subtle);
+  border-radius: 10px; padding: 10px 12px; color: var(--text-primary);
+  font-family: inherit; font-size: 0.9rem; outline: none; transition: border-color 0.2s;
+}
+.player-input-row input[type="text"]:focus { border-color: var(--accent-gold); }
+.player-input-row input[type="number"] {
+  width: 64px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-subtle);
+  border-radius: 10px; padding: 10px 8px; color: var(--accent-gold);
+  font-family: inherit; font-size: 0.9rem; font-weight: 700; text-align: center; outline: none;
+}
+.player-input-row input[type="number"]:focus { border-color: var(--accent-gold); }
+.goal-label { font-size: 0.65rem; color: var(--text-secondary); white-space: nowrap; margin-bottom: 4px; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 12px 24px; border: none; border-radius: 12px;
+  font-family: 'M PLUS Rounded 1c', sans-serif; font-weight: 700; font-size: 0.9rem;
+  cursor: pointer; transition: all 0.2s; width: 100%;
+}
+.btn:active { transform: scale(0.97); }
+.btn-primary { background: linear-gradient(135deg, var(--accent-gold), #ffaa00); color: #1a1a00; box-shadow: var(--glow-gold); }
+.btn-primary:hover { box-shadow: 0 0 30px rgba(255,215,0,0.5); }
+.btn-blue { background: linear-gradient(135deg, var(--accent-blue), #5b6bfa); color: #fff; box-shadow: 0 0 14px rgba(55,66,250,0.2); }
+.btn-blue:hover { box-shadow: 0 0 24px rgba(55,66,250,0.4); }
+.btn-small { padding: 8px 16px; font-size: 0.8rem; width: auto; border-radius: 8px; }
+.btn-ghost { background: rgba(255,255,255,0.05); color: var(--text-secondary); border: 1px dashed var(--border-subtle); }
+.btn-ghost:hover { background: rgba(255,255,255,0.08); color: var(--text-primary); }
+.btn-danger { background: rgba(255,71,87,0.1); color: var(--accent-red); border: 1px solid rgba(255,71,87,0.3); }
+.btn-danger:hover { background: rgba(255,71,87,0.2); }
+.btn-win {
+  background: linear-gradient(135deg, var(--accent-green), #20bf6b); color: #fff;
+  flex: 1; min-width: 0; padding: 12px 8px; border-radius: 12px; font-size: 0.8rem;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.btn-win:hover { box-shadow: 0 0 20px rgba(46,213,115,0.4); }
+.btn-timeout {
+  display: flex; align-items: center; justify-content: center; width: 100%;
+  margin-top: 8px; padding: 10px; border: 1px solid rgba(255,71,87,0.3);
+  border-radius: 10px; background: rgba(255,71,87,0.08); color: var(--accent-red);
+  font-family: 'M PLUS Rounded 1c', sans-serif; font-weight: 700; font-size: 0.78rem;
+  cursor: pointer; transition: all 0.2s;
+}
+.btn-timeout:hover { background: rgba(255,71,87,0.18); box-shadow: 0 0 15px rgba(255,71,87,0.2); }
+.btn-timeout:active { transform: scale(0.97); }
+
+/* Lobby members */
+.member-item {
+  display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+  border-radius: 10px; margin-bottom: 6px; background: rgba(255,255,255,0.02);
+  border: 1px solid var(--border-subtle); animation: fadeUp 0.3s ease-out;
+}
+.member-name { font-weight: 700; font-size: 0.9rem; flex: 1; }
+.member-badge {
+  font-size: 0.6rem; padding: 2px 8px; border-radius: 10px; font-weight: 700;
+}
+.badge-owner { background: rgba(255,215,0,0.15); color: var(--accent-gold); border: 1px solid rgba(255,215,0,0.3); }
+.badge-member { background: rgba(46,213,115,0.1); color: var(--accent-green); border: 1px solid rgba(46,213,115,0.3); }
+.room-id-display {
+  font-family: 'Dela Gothic One', cursive; font-size: 1.6rem; color: var(--accent-gold);
+  text-align: center; letter-spacing: 0.15em; padding: 8px 0;
+}
+.room-pw-display { font-size: 0.75rem; color: var(--text-secondary); text-align: center; margin-top: 4px; }
+.pulse-text { animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:0.5} 50%{opacity:1} }
+
+/* Scoreboard */
+.scoreboard-entry {
+  display: flex; align-items: center; gap: 8px; padding: 10px;
+  border-radius: 12px; margin-bottom: 8px; background: rgba(255,255,255,0.02);
+  border: 1px solid var(--border-subtle); transition: all 0.3s; position: relative; overflow: hidden;
+}
+.scoreboard-entry.finished { border-color: rgba(255,215,0,0.3); background: rgba(255,215,0,0.05); }
+.scoreboard-entry.finished::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(90deg, rgba(255,215,0,0.05), transparent); pointer-events: none;
+}
+.rank { font-family: 'Dela Gothic One', cursive; font-size: 1.1rem; width: 32px; text-align: center; flex-shrink: 0; }
+.rank.gold { color: #ffd700; } .rank.silver { color: #c0c0c0; } .rank.bronze { color: #cd7f32; }
+.player-info { flex: 1; min-width: 0; }
+.player-name-display { font-weight: 700; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.player-stats { font-size: 0.7rem; color: var(--text-secondary); margin-top: 2px; }
+.point-display { text-align: right; flex-shrink: 0; }
+.point-current { font-family: 'Dela Gothic One', cursive; font-size: 1.15rem; color: var(--accent-gold); }
+.point-goal { font-size: 0.65rem; color: var(--text-secondary); }
+.progress-bar-bg { width: 60px; height: 4px; background: rgba(255,255,255,0.08); border-radius: 2px; margin-top: 4px; margin-left: auto; }
+.progress-bar-fill { height: 100%; border-radius: 2px; background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple)); transition: width 0.5s ease; }
+
+.match-card {
+  background: linear-gradient(135deg, rgba(55,66,250,0.1), rgba(168,85,247,0.1));
+  border: 1px solid rgba(255,255,255,0.1); border-radius: 16px;
+  padding: 16px; margin-bottom: 12px; text-align: center; overflow: hidden;
+}
+.match-vs { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+.match-player {
+  font-weight: 900; font-size: 1rem; padding: 8px 12px;
+  background: rgba(255,255,255,0.06); border-radius: 10px;
+  max-width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.vs-text { font-family: 'Dela Gothic One', cursive; font-size: 0.85rem; color: var(--accent-red); flex-shrink: 0; }
+.match-actions { display: flex; gap: 8px; }
+.match-table-label { font-size: 0.7rem; color: var(--text-secondary); margin-bottom: 8px; letter-spacing: 0.1em; }
+
+.waiting-area {
+  text-align: center; padding: 12px; background: rgba(255,255,255,0.02);
+  border-radius: 12px; border: 1px dashed var(--border-subtle); margin-bottom: 12px;
+}
+.waiting-label { font-size: 0.7rem; color: var(--text-secondary); margin-bottom: 4px; }
+.waiting-name { font-weight: 700; font-size: 0.95rem; }
+
+.history-item { display: flex; align-items: center; gap: 6px; padding: 8px 10px; font-size: 0.8rem; border-bottom: 1px solid var(--border-subtle); overflow: hidden; }
+.history-item:last-child { border-bottom: none; }
+.history-num { color: var(--text-secondary); font-size: 0.7rem; width: 24px; flex-shrink: 0; }
+.history-winner { color: var(--accent-green); font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.history-loser { color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.finish-overlay {
+  position: fixed; inset: 0; background: rgba(10,10,26,0.95); z-index: 100;
+  display: flex; align-items: center; justify-content: center; animation: fadeIn 0.5s;
+}
+@keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+.finish-content { text-align: center; padding: 24px 16px; max-width: 400px; width: 92%; }
+.finish-title {
+  font-family: 'Dela Gothic One', cursive; font-size: 1.5rem;
+  background: linear-gradient(135deg, var(--accent-gold), #ffaa00);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 24px;
+}
+.finish-rank-row {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  padding: 8px; font-size: 1rem; flex-wrap: wrap;
+  animation: slideIn 0.4s ease-out backwards;
+}
+@keyframes slideIn { from { opacity:0; transform:translateX(-20px); } to { opacity:1; transform:translateX(0); } }
+.crown { font-size: 1.5rem; }
+
+.confetti-piece {
+  position: fixed; width: 8px; height: 8px; z-index: 101; pointer-events: none;
+  animation: confettiFall 3s ease-out forwards;
+}
+@keyframes confettiFall { 0% { transform:translateY(-10vh) rotate(0deg); opacity:1; } 100% { transform:translateY(110vh) rotate(720deg); opacity:0; } }
+
+.hidden { display: none !important; }
+
+.toast {
+  position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+  background: var(--accent-green); color: #fff; padding: 10px 20px;
+  border-radius: 20px; font-weight: 700; font-size: 0.8rem; z-index: 50;
+  animation: toastPop 2s ease-out forwards; white-space: nowrap;
+  max-width: 90vw; overflow: hidden; text-overflow: ellipsis;
+}
+.toast.toast-error { background: var(--accent-red); }
+@keyframes toastPop {
+  0% { opacity:0; transform:translateX(-50%) translateY(20px); }
+  15% { opacity:1; transform:translateX(-50%) translateY(0); }
+  85% { opacity:1; transform:translateX(-50%) translateY(0); }
+  100% { opacity:0; transform:translateX(-50%) translateY(-10px); }
+}
+
+.undo-bar { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 50; }
+.btn-undo {
+  background: rgba(255,255,255,0.1); color: var(--text-secondary);
+  border: 1px solid var(--border-subtle); padding: 8px 20px; font-size: 0.75rem; border-radius: 20px;
+}
+.reset-area { text-align: center; margin-top: 12px; }
+.btn-reset { background: none; border: none; color: var(--text-secondary); font-size: 0.7rem; cursor: pointer; text-decoration: underline; font-family: inherit; }
+
+.mode-selector { display: flex; gap: 8px; margin-bottom: 14px; }
+.mode-btn {
+  flex: 1; padding: 12px 8px; border-radius: 12px; border: 2px solid var(--border-subtle);
+  background: rgba(255,255,255,0.02); color: var(--text-secondary);
+  font-family: 'M PLUS Rounded 1c', sans-serif; font-weight: 700; font-size: 0.8rem;
+  cursor: pointer; transition: all 0.2s; text-align: center;
+}
+.mode-btn.active {
+  border-color: var(--accent-gold); color: var(--accent-gold);
+  background: rgba(255,215,0,0.08); box-shadow: 0 0 12px rgba(255,215,0,0.15);
+}
+
+.match-counter-bar {
+  background: linear-gradient(135deg, rgba(55,66,250,0.12), rgba(168,85,247,0.12));
+  border: 1px solid rgba(255,255,255,0.1); border-radius: 12px;
+  padding: 12px 16px; margin-bottom: 16px; text-align: center;
+}
+.match-counter-text { font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 6px; }
+.match-counter-numbers { font-family: 'Dela Gothic One', cursive; font-size: 1.4rem; color: var(--accent-gold); }
+.match-counter-progress { width: 100%; height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; margin-top: 8px; overflow: hidden; }
+.match-counter-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--accent-green), var(--accent-gold)); transition: width 0.5s ease; }
+
+.remove-player {
+  background: none; border: none; color: var(--accent-red); font-size: 1.2rem;
+  cursor: pointer; padding: 4px; margin-bottom: 6px; opacity: 0.5; transition: opacity 0.2s;
+}
+.remove-player:hover { opacity: 1; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <h1>⚡ POKÉCARD BATTLE</h1>
+    <div class="subtitle">リアルタイム回転式バトルマネージャー</div>
+  </div>
+
+  <!-- ========== TOP: ルーム選択 ========== -->
+  <div id="top-phase">
+    <div class="section" style="background:linear-gradient(135deg,rgba(255,215,0,0.06),rgba(168,85,247,0.06));border-color:rgba(255,215,0,0.15);">
+      <div class="section-title"><span class="icon">🏠</span> ルームに入ろう</div>
+      <div style="display:flex;gap:10px;">
+        <button class="btn btn-primary" onclick="showScreen('create-phase')" style="flex:1;">🔨 作成</button>
+        <button class="btn btn-blue" onclick="showScreen('join-phase')" style="flex:1;">🚪 参加</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== CREATE ROOM ========== -->
+  <div id="create-phase" class="hidden">
+    <div class="section">
+      <div class="section-title"><span class="icon">🔨</span> ルーム作成</div>
+      <div style="margin-bottom:12px;">
+        <div class="input-label">あなたの名前</div>
+        <input type="text" id="create-name" class="input-field" placeholder="名前を入力" maxlength="10">
+      </div>
+      <div style="margin-bottom:16px;">
+        <div class="input-label">合言葉（参加者に共有してね）</div>
+        <input type="text" id="create-pw" class="input-field" placeholder="合言葉を設定" maxlength="20">
+      </div>
+      <button class="btn btn-primary" onclick="createRoom()">✨ ルームを作成</button>
+      <button class="btn btn-ghost" onclick="showScreen('top-phase')" style="margin-top:8px;">← 戻る</button>
+    </div>
+  </div>
+
+  <!-- ========== JOIN ROOM ========== -->
+  <div id="join-phase" class="hidden">
+    <div class="section">
+      <div class="section-title"><span class="icon">🚪</span> ルーム参加</div>
+      <div style="margin-bottom:12px;">
+        <div class="input-label">あなたの名前</div>
+        <input type="text" id="join-name" class="input-field" placeholder="名前を入力" maxlength="10">
+      </div>
+      <div style="margin-bottom:16px;">
+        <div class="input-label">合言葉</div>
+        <input type="text" id="join-pw" class="input-field" placeholder="オーナーから聞いた合言葉">
+      </div>
+      <button class="btn btn-blue" onclick="joinRoom()">🚪 参加する</button>
+      <button class="btn btn-ghost" onclick="showScreen('top-phase')" style="margin-top:8px;">← 戻る</button>
+    </div>
+  </div>
+
+  <!-- ========== LOBBY ========== -->
+  <div id="lobby-phase" class="hidden">
+    <div class="section" style="background:linear-gradient(135deg,rgba(255,215,0,0.06),rgba(168,85,247,0.06));border-color:rgba(255,215,0,0.15);">
+      <div class="section-title"><span class="icon">📡</span> ルーム情報</div>
+      <div class="room-id-display" id="lobby-room-id"></div>
+      <div class="room-pw-display">合言葉: <span id="lobby-pw"></span></div>
+    </div>
+    <div class="section">
+      <div class="section-title"><span class="icon">👥</span> メンバー <span id="member-count" style="margin-left:auto;font-size:0.7rem;color:var(--text-secondary);"></span></div>
+      <div id="lobby-members"></div>
+      <div id="lobby-status" class="pulse-text" style="text-align:center;padding:10px;color:var(--text-secondary);font-size:0.8rem;">
+        メンバーの参加を待っています...
+      </div>
+    </div>
+    <div id="owner-controls" class="hidden">
+      <button class="btn btn-primary" onclick="confirmMembers()">✅ メンバー確定！→ 設定へ</button>
+    </div>
+    <div id="guest-status" class="hidden" style="text-align:center;padding:16px;color:var(--text-secondary);font-size:0.85rem;">
+      <div class="pulse-text">⏳ オーナーがメンバーを確定するのを待っています...</div>
+    </div>
+    <button class="btn btn-danger" onclick="leaveRoom()" style="margin-top:10px;">🚪 退出する</button>
+  </div>
+
+  <!-- ========== SETUP (Owner sets game config) ========== -->
+  <div id="setup-phase" class="hidden">
+    <div class="section">
+      <div class="section-title"><span class="icon">🎮</span> ゲームモード</div>
+      <div class="mode-selector">
+        <button class="mode-btn active" id="mode-goal-btn" onclick="setMode('goal')">🏁 ゴール到達</button>
+        <button class="mode-btn" id="mode-count-btn" onclick="setMode('count')">🔢 試合数制</button>
+      </div>
+      <div id="mode-desc" style="font-size:0.75rem;color:var(--text-secondary);line-height:1.6;"></div>
+    </div>
+    <div class="section">
+      <div class="section-title"><span class="icon">👥</span> プレイヤー設定</div>
+      <div id="player-inputs"></div>
+    </div>
+    <div class="section">
+      <div class="section-title"><span class="icon">⚙️</span> ポイント設定</div>
+      <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:8px;">勝ち・負け・時間切れのポイントを設定（マイナスOK）</div>
+      <div style="display:flex;gap:8px;margin-bottom:8px;">
+        <div style="flex:1;"><div style="font-size:0.7rem;color:var(--text-secondary);margin-bottom:4px;">勝利</div>
+          <input type="number" id="win-pt" value="3" min="1" max="10" style="width:100%;background:rgba(255,255,255,0.05);border:1px solid var(--border-subtle);border-radius:10px;padding:10px;color:var(--accent-green);font-family:inherit;font-size:1rem;font-weight:700;text-align:center;"></div>
+        <div style="flex:1;"><div style="font-size:0.7rem;color:var(--text-secondary);margin-bottom:4px;">敗北</div>
+          <input type="number" id="lose-pt" value="-1" min="-10" max="5" style="width:100%;background:rgba(255,255,255,0.05);border:1px solid var(--border-subtle);border-radius:10px;padding:10px;color:var(--accent-red);font-family:inherit;font-size:1rem;font-weight:700;text-align:center;"></div>
+        <div style="flex:1;"><div style="font-size:0.7rem;color:var(--accent-red);margin-bottom:4px;">⏰ 時間切れ</div>
+          <input type="number" id="timeout-pt" value="-3" min="-10" max="0" style="width:100%;background:rgba(255,71,87,0.08);border:1px solid rgba(255,71,87,0.3);border-radius:10px;padding:10px;color:var(--accent-red);font-family:inherit;font-size:1rem;font-weight:700;text-align:center;"></div>
+      </div>
+      <div id="match-count-setting" class="hidden" style="margin-top:12px;">
+        <div style="font-size:0.7rem;color:var(--accent-purple);margin-bottom:4px;">🔢 合計試合数</div>
+        <input type="number" id="total-matches" value="18" min="5" max="100" style="width:100%;background:rgba(168,85,247,0.08);border:1px solid rgba(168,85,247,0.3);border-radius:10px;padding:10px;color:var(--accent-purple);font-family:inherit;font-size:1.1rem;font-weight:700;text-align:center;">
+        <div style="font-size:0.65rem;color:var(--text-secondary);margin-top:4px;text-align:center;">2卓×20分 → 18試合で約3時間</div>
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="startBattle()">🔥 バトル開始！</button>
+  </div>
+
+  <!-- ========== BATTLE ========== -->
+  <div id="battle-phase" class="hidden">
+    <div id="rules-section" class="section" style="background:linear-gradient(135deg,rgba(255,215,0,0.06),rgba(168,85,247,0.06));border-color:rgba(255,215,0,0.15);">
+      <div class="section-title" style="margin-bottom:10px;cursor:pointer;" onclick="toggleRules()">
+        <span class="icon">📖</span> ルール <span id="rules-toggle" style="margin-left:auto;font-size:0.7rem;color:var(--text-secondary);">▲ 閉じる</span>
+      </div>
+      <div id="rules-body"><div id="rules-content" style="font-size:0.78rem;line-height:1.7;color:var(--text-secondary);"></div></div>
+    </div>
+    <div id="match-counter-section" class="hidden">
+      <div class="match-counter-bar">
+        <div class="match-counter-text">試合進行</div>
+        <div class="match-counter-numbers"><span id="played-count">0</span> / <span id="total-count">18</span></div>
+        <div class="match-counter-progress"><div class="match-counter-fill" id="match-progress-fill" style="width:0%"></div></div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-title"><span class="icon">🏆</span> スコアボード</div>
+      <div id="scoreboard"></div>
+    </div>
+    <div class="section">
+      <div class="section-title"><span class="icon">⚔️</span> 対戦中</div>
+      <div id="match-area"></div>
+      <div id="waiting-area"></div>
+    </div>
+    <div class="section">
+      <div class="section-title"><span class="icon">📋</span> 対戦履歴</div>
+      <div id="history-area"><div style="font-size:0.8rem;color:var(--text-secondary);text-align:center;padding:8px;">まだ対戦がありません</div></div>
+    </div>
+    <div class="reset-area"><button class="btn-reset" onclick="resetRoom()">🔄 最初からやり直す</button></div>
+  </div>
+
+  <!-- ========== FINISH ========== -->
+  <div id="finish-overlay" class="finish-overlay hidden">
+    <div class="finish-content">
+      <div class="finish-title">🏆 最終結果 🏆</div>
+      <div class="finish-ranking" id="finish-ranking"></div>
+      <button class="btn btn-primary" onclick="resetRoom()">もう一回遊ぶ！</button>
+    </div>
+  </div>
+</div>
+
+<div class="undo-bar" id="undo-bar" style="display:none;">
+  <button class="btn btn-undo btn-small" onclick="undoLast()">↩ 取り消し</button>
+</div>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-database-compat.js"></script>
+
+<script>
+// ===== Firebase Init =====
+firebase.initializeApp({
+  apiKey: "AIzaSyDlTfyN3HCz4exb0aYLu2hv2v9uUb9fIEE",
+  authDomain: "pokebattle-62975.firebaseapp.com",
+  projectId: "pokebattle-62975",
+  storageBucket: "pokebattle-62975.firebasestorage.app",
+  messagingSenderId: "1407681774",
+  appId: "1:1407681774:web:a1446a078ccccec4cd9fff",
+  databaseURL: "https://pokebattle-62975-default-rtdb.asia-southeast1.firebasedatabase.app"
+});
+const db = firebase.database();
+
+// ===== STATE =====
+let myName = '', isOwner = false, roomId = '', roomRef = null;
+let players=[], matches=[], history=[], finishOrder=[], waitingQueue=[], undoSnapshots=[];
+let winPt=3, losePt=-1, timeoutPt=-3, matchCounter=0;
+let gameMode='goal', totalMatchLimit=18;
+
+// ===== SCREEN MANAGEMENT =====
+const ALL_SCREENS = ['top-phase','create-phase','join-phase','lobby-phase','setup-phase','battle-phase'];
+function showScreen(id) {
+  ALL_SCREENS.forEach(s => document.getElementById(s).classList.add('hidden'));
+  document.getElementById('finish-overlay').classList.add('hidden');
+  document.getElementById(id).classList.remove('hidden');
+}
+
+// ===== ROOM ID GENERATOR =====
+function generateRoomId() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let r = ''; for(let i=0;i<5;i++) r += chars[Math.floor(Math.random()*chars.length)];
+  return r;
+}
+
+// ===== CREATE ROOM =====
+function createRoom() {
+  const name = document.getElementById('create-name').value.trim();
+  const pw = document.getElementById('create-pw').value.trim();
+  if(!name) { showToast('名前を入力してください','error'); return; }
+  if(!pw) { showToast('合言葉を入力してください','error'); return; }
+
+  roomId = generateRoomId();
+  myName = name;
+  isOwner = true;
+  roomRef = db.ref('rooms/' + roomId);
+
+  roomRef.set({
+    password: pw,
+    owner: name,
+    phase: 'waiting',  // waiting → setup → battle → finished
+    members: [{ name: name, isOwner: true }],
+    gameState: null
+  });
+
+  listenRoom();
+  showScreen('lobby-phase');
+  showToast('ルーム作成完了！合言葉を共有してね');
+}
+
+// ===== JOIN ROOM =====
+async function joinRoom() {
+  const name = document.getElementById('join-name').value.trim();
+  const pw = document.getElementById('join-pw').value.trim();
+  if(!name) { showToast('名前を入力してください','error'); return; }
+  if(!pw) { showToast('合言葉を入力してください','error'); return; }
+
+  // Search all rooms for matching password
+  const snap = await db.ref('rooms').once('value');
+  const rooms = snap.val();
+  if(!rooms) { showToast('ルームが見つかりません','error'); return; }
+
+  let foundId = null;
+  for(const [id, room] of Object.entries(rooms)) {
+    if(room.password === pw && (room.phase === 'waiting')) {
+      foundId = id; break;
+    }
+  }
+  if(!foundId) { showToast('合言葉が一致するルームが見つかりません','error'); return; }
+
+  // Check for duplicate name
+  const roomSnap = await db.ref('rooms/' + foundId).once('value');
+  const roomData = roomSnap.val();
+  const members = roomData.members || [];
+  if(members.find(m => m.name === name)) { showToast('同じ名前のメンバーがすでにいます','error'); return; }
+
+  roomId = foundId;
+  myName = name;
+  isOwner = false;
+  roomRef = db.ref('rooms/' + roomId);
+
+  // Add self
+  members.push({ name: name, isOwner: false });
+  await roomRef.child('members').set(members);
+
+  listenRoom();
+  showScreen('lobby-phase');
+  showToast('ルームに参加しました！');
+}
+
+// ===== ROOM LISTENER =====
+function listenRoom() {
+  if(!roomRef) return;
+  roomRef.on('value', (snapshot) => {
+    const data = snapshot.val();
+
+    // Room deleted → back to top
+    if(!data) {
+      roomRef.off();
+      roomRef = null;
+      showScreen('top-phase');
+      showToast('ルームが閉じられました','error');
+      return;
+    }
+
+    const phase = data.phase;
+
+    // === WAITING (Lobby) ===
+    if(phase === 'waiting') {
+      document.getElementById('lobby-room-id').textContent = '🏠 ' + roomId;
+      document.getElementById('lobby-pw').textContent = data.password;
+      renderLobbyMembers(data.members || []);
+      document.getElementById('owner-controls').classList.toggle('hidden', !isOwner);
+      document.getElementById('guest-status').classList.toggle('hidden', isOwner);
+      document.getElementById('lobby-status').textContent = 'メンバーの参加を待っています...';
+      // Ensure we're on lobby screen
+      if(document.getElementById('lobby-phase').classList.contains('hidden')) {
+        showScreen('lobby-phase');
+      }
+    }
+
+    // === SETUP (Owner configuring) ===
+    if(phase === 'setup') {
+      if(isOwner) {
+        // Only build inputs once
+        if(document.getElementById('setup-phase').classList.contains('hidden')) {
+          buildPlayerInputs(data.members || []);
+          showScreen('setup-phase');
+          setMode('goal');
+        }
+      } else {
+        // Guests see lobby with "setting up" message
+        document.getElementById('lobby-room-id').textContent = '🏠 ' + roomId;
+        document.getElementById('lobby-pw').textContent = data.password;
+        renderLobbyMembers(data.members || []);
+        document.getElementById('owner-controls').classList.add('hidden');
+        document.getElementById('guest-status').classList.remove('hidden');
+        document.getElementById('guest-status').innerHTML = '<div class="pulse-text">⚙️ オーナーがゲーム設定中...</div>';
+        document.getElementById('lobby-status').textContent = 'メンバー確定済み！';
+        if(document.getElementById('lobby-phase').classList.contains('hidden')) {
+          showScreen('lobby-phase');
+        }
+      }
+    }
+
+    // === BATTLE or FINISHED ===
+    if(phase === 'battle' || phase === 'finished') {
+      const gs = data.gameState;
+      if(!gs || !gs.players) return;
+
+      // Restore state
+      players = gs.players;
+      matches = gs.matches || [];
+      history = gs.history || [];
+      finishOrder = gs.finishOrder || [];
+      waitingQueue = gs.waitingQueue || [];
+      matchCounter = gs.matchCounter || 0;
+      gameMode = gs.gameMode || 'goal';
+      winPt = gs.winPt || 3;
+      losePt = gs.losePt != null ? gs.losePt : -1;
+      timeoutPt = gs.timeoutPt != null ? gs.timeoutPt : -3;
+      totalMatchLimit = gs.totalMatchLimit || 18;
+
+      document.getElementById('match-counter-section').classList.toggle('hidden', gameMode !== 'count');
+      if(gameMode === 'count') document.getElementById('total-count').textContent = totalMatchLimit;
+
+      showScreen('battle-phase');
+      renderRules();
+      renderAll();
+      if(phase === 'finished') showFinish();
+    }
+  });
+}
+
+function renderLobbyMembers(members) {
+  const c = document.getElementById('lobby-members');
+  c.innerHTML = members.map(m =>
+    `<div class="member-item">
+      <div class="member-name">${m.isOwner ? '👑 ' : ''}${m.name}</div>
+      <span class="member-badge ${m.isOwner ? 'badge-owner' : 'badge-member'}">${m.isOwner ? 'オーナー' : '参加済み'}</span>
+    </div>`
+  ).join('');
+  document.getElementById('member-count').textContent = members.length + '人';
+}
+
+// ===== CONFIRM MEMBERS (Owner only) =====
+function confirmMembers() {
+  if(!roomRef) return;
+  roomRef.child('phase').set('setup');
+}
+
+function buildPlayerInputs(members) {
+  const c = document.getElementById('player-inputs');
+  c.innerHTML = '';
+  members.forEach(m => {
+    const row = document.createElement('div');
+    row.className = 'player-input-row';
+    row.innerHTML = `
+      <div style="flex:1;min-width:0;"><div class="goal-label">名前</div>
+        <input type="text" value="${m.name}" maxlength="10" readonly style="opacity:0.7;cursor:default;"></div>
+      <div class="goal-col" style="text-align:center;"><div class="goal-label">目標pt</div>
+        <input type="number" value="10" min="3" max="30"></div>`;
+    c.appendChild(row);
+  });
+}
+
+// ===== LEAVE ROOM =====
+async function leaveRoom() {
+  if(!roomRef) return;
+  if(isOwner) {
+    if(!confirm('ルームを閉じますか？全メンバーが退出されます。')) return;
+    await roomRef.remove();
+  } else {
+    const snap = await roomRef.child('members').once('value');
+    const members = (snap.val() || []).filter(m => m.name !== myName);
+    await roomRef.child('members').set(members);
+  }
+  roomRef.off();
+  roomRef = null;
+  showScreen('top-phase');
+}
+
+// ===== MODE =====
+function setMode(mode) {
+  gameMode = mode;
+  document.getElementById('mode-goal-btn').classList.toggle('active', mode==='goal');
+  document.getElementById('mode-count-btn').classList.toggle('active', mode==='count');
+  document.getElementById('match-count-setting').classList.toggle('hidden', mode!=='count');
+  document.querySelectorAll('.goal-col').forEach(el => el.classList.toggle('hidden', mode!=='goal'));
+  document.getElementById('mode-desc').innerHTML = mode==='goal'
+    ? '🏁 各プレイヤーが目標ポイントに到達した順に順位確定。先に抜けた人の勝ち！'
+    : '🔢 合計試合数を決めて全試合終了後、ポイント順で順位決定。全員最後まで参加！';
+}
+
+// ===== SYNC STATE TO FIREBASE =====
+function syncState(phase) {
+  if(!roomRef) return;
+  const ph = phase || (players.every(p => p.finished) ? 'finished' : 'battle');
+  roomRef.update({
+    phase: ph,
+    gameState: {
+      players, matches, history, finishOrder,
+      waitingQueue, matchCounter, gameMode,
+      winPt, losePt, timeoutPt, totalMatchLimit
+    }
+  });
+}
+
+// ===== START BATTLE =====
+function startBattle() {
+  const rows = document.querySelectorAll('#player-inputs .player-input-row');
+  if(rows.length < 2) { showToast('2人以上必要です','error'); return; }
+
+  winPt = parseInt(document.getElementById('win-pt').value) || 3;
+  losePt = parseInt(document.getElementById('lose-pt').value); if(isNaN(losePt)) losePt=-1;
+  timeoutPt = parseInt(document.getElementById('timeout-pt').value); if(isNaN(timeoutPt)) timeoutPt=-3;
+  if(gameMode === 'count') totalMatchLimit = parseInt(document.getElementById('total-matches').value) || 18;
+
+  players = [];
+  rows.forEach((row, i) => {
+    const nm = row.querySelector('input[type="text"]').value.trim() || `P${i+1}`;
+    const gl = parseInt(row.querySelector('input[type="number"]')?.value) || 10;
+    players.push({id:i, name:nm, goal:gl, points:0, wins:0, losses:0, timeouts:0, finished:false, finishRank:null});
+  });
+
+  matches=[]; history=[]; finishOrder=[]; waitingQueue=[]; undoSnapshots=[]; matchCounter=0;
+  initialAssign();
+  syncState('battle');
+}
+
+// ===== MATCH ASSIGNMENT (Queue-based) =====
+function getActivePlayers() { return players.filter(p => !p.finished); }
+
+function fillMatches() {
+  const usedTables = new Set(matches.map(m => m.table));
+  const freeTables = [1,2].filter(t => !usedTables.has(t));
+  const played = history.length, inProg = matches.length;
+
+  while(waitingQueue.length >= 2 && freeTables.length > 0) {
+    if(gameMode === 'count' && (played + inProg + 1) > totalMatchLimit) break;
+    const table = freeTables.shift();
+    const p1 = waitingQueue.shift();
+    let p2Idx = 0;
+    for(let i=0; i<waitingQueue.length; i++) {
+      const recent = [...history].slice(-5).find(h =>
+        (h.winner===p1 && h.loser===waitingQueue[i]) || (h.loser===p1 && h.winner===waitingQueue[i]) ||
+        (h.type==='timeout' && ((h.p1===p1 && h.p2===waitingQueue[i]) || (h.p2===p1 && h.p1===waitingQueue[i])))
+      );
+      if(!recent) { p2Idx=i; break; }
+    }
+    const p2 = waitingQueue.splice(p2Idx, 1)[0];
+    matchCounter++;
+    matches.push({id:matchCounter, p1, p2, table});
+  }
+}
+
+function initialAssign() {
+  waitingQueue = getActivePlayers().map(p => p.id).sort(() => Math.random()-0.5);
+  fillMatches();
+}
+
+function afterWin(wId, lId) {
+  if(!players[lId].finished) waitingQueue.unshift(lId);
+  if(!players[wId].finished) waitingQueue.push(wId);
+  fillMatches();
+}
+
+function afterTimeout(p1Id, p2Id) {
+  if(!players[p1Id].finished) waitingQueue.push(p1Id);
+  if(!players[p2Id].finished) waitingQueue.push(p2Id);
+  fillMatches();
+}
+
+// ===== CHECK GAME END =====
+function checkGameEnd() {
+  if(gameMode === 'goal') {
+    const active = getActivePlayers();
+    if(active.length <= 1) {
+      if(active.length === 1) { active[0].finished=true; active[0].finishRank=finishOrder.length+1; finishOrder.push(active[0].id); }
+      matches=[]; waitingQueue=[]; renderAll(); syncState('finished'); setTimeout(showFinish, 600); return true;
+    }
+  } else {
+    if(history.length >= totalMatchLimit) {
+      matches=[]; waitingQueue=[];
+      const ranked = [...players].sort((a,b) => b.points-a.points || b.wins-a.wins);
+      finishOrder = ranked.map(p => p.id);
+      ranked.forEach((p,i) => { p.finishRank=i+1; p.finished=true; });
+      renderAll(); syncState('finished'); setTimeout(showFinish, 600); return true;
+    }
+    if(matches.length===0 && waitingQueue.length<2) {
+      const ranked = [...players].sort((a,b) => b.points-a.points || b.wins-a.wins);
+      finishOrder = ranked.map(p => p.id);
+      ranked.forEach((p,i) => { p.finishRank=i+1; p.finished=true; });
+      renderAll(); syncState('finished'); setTimeout(showFinish, 600); return true;
+    }
+  }
+  return false;
+}
+
+// ===== SNAPSHOT & UNDO =====
+function saveSnapshot() {
+  undoSnapshots.push({matches:JSON.parse(JSON.stringify(matches)), waitingQueue:[...waitingQueue], finishOrder:[...finishOrder], players:players.map(p=>({...p}))});
+  if(undoSnapshots.length > 5) undoSnapshots.shift();
+}
+
+function showUndo() {
+  const bar = document.getElementById('undo-bar'); bar.style.display='block';
+  clearTimeout(bar._timeout); bar._timeout = setTimeout(() => { bar.style.display='none'; }, 5000);
+}
+
+function undoLast() {
+  if(history.length===0 || undoSnapshots.length===0) return;
+  history.pop(); const snap = undoSnapshots.pop();
+  matches=snap.matches; waitingQueue=snap.waitingQueue; finishOrder=snap.finishOrder;
+  snap.players.forEach((s,i) => Object.assign(players[i], s));
+  document.getElementById('undo-bar').style.display='none';
+  document.getElementById('finish-overlay').classList.add('hidden');
+  renderAll(); syncState();
+}
+
+// ===== REPORT WIN =====
+function reportWin(matchId, winnerId) {
+  const match = matches.find(m => m.id===matchId); if(!match) return;
+  saveSnapshot();
+  const loserId = match.p1===winnerId ? match.p2 : match.p1;
+  const w=players[winnerId], l=players[loserId];
+  w.points+=winPt; w.wins++; l.points+=losePt; l.losses++;
+  history.push({matchId:match.id, winner:winnerId, loser:loserId, winnerPts:w.points, loserPts:l.points});
+  matches = matches.filter(m => m.id!==matchId);
+  if(gameMode==='goal') {
+    if(w.points>=w.goal && !w.finished) { w.finished=true; w.finishRank=finishOrder.length+1; finishOrder.push(winnerId); showToast(`🎉 ${w.name} が ${w.finishRank}位で完走！`); }
+    if(l.points>=l.goal && !l.finished) { l.finished=true; l.finishRank=finishOrder.length+1; finishOrder.push(loserId); showToast(`🎉 ${l.name} が ${l.finishRank}位で完走！`); }
+  }
+  if(checkGameEnd()) return;
+  afterWin(winnerId, loserId); renderAll(); showUndo(); syncState();
+}
+
+// ===== REPORT TIMEOUT =====
+function reportTimeout(matchId) {
+  const match = matches.find(m => m.id===matchId); if(!match) return;
+  saveSnapshot();
+  const p1=players[match.p1], p2=players[match.p2];
+  p1.points+=timeoutPt; p1.losses++; p1.timeouts++;
+  p2.points+=timeoutPt; p2.losses++; p2.timeouts++;
+  history.push({matchId:match.id, type:'timeout', p1:match.p1, p2:match.p2, p1Pts:p1.points, p2Pts:p2.points});
+  matches = matches.filter(m => m.id!==matchId);
+  showToast(`⏰ 時間切れ！ ${p1.name} & ${p2.name} に ${timeoutPt}pt`);
+  if(checkGameEnd()) return;
+  afterTimeout(match.p1, match.p2); renderAll(); showUndo(); syncState();
+}
+
+// ===== RULES =====
+function renderRules() {
+  const c = document.getElementById('rules-content');
+  const lp = losePt>=0 ? `+${losePt}pt` : `${losePt}pt`;
+  const tp = timeoutPt>=0 ? `+${timeoutPt}pt` : `${timeoutPt}pt`;
+  let mr = '';
+  if(gameMode==='goal') {
+    const gl = players.map(p => `<span style="color:var(--text-primary);font-weight:700;">${p.name}</span> → ${p.goal}pt`).join('　');
+    mr = `<div style="margin-bottom:6px;">🎯 目標ポイントに到達した人から順位確定！</div><div style="margin-bottom:6px;padding-left:4px;">${gl}</div>`;
+  } else {
+    mr = `<div style="margin-bottom:6px;">🔢 全 <span style="color:var(--accent-purple);font-weight:700;">${totalMatchLimit}試合</span> 終了後、ポイント順で順位決定！</div>`;
+  }
+  c.innerHTML = `<div style="margin-bottom:6px;">🏆 <span style="color:var(--accent-green);font-weight:700;">勝利 +${winPt}pt</span>　💀 <span style="color:var(--accent-red);font-weight:700;">敗北 ${lp}</span>　⏰ <span style="color:var(--accent-red);font-weight:700;">時間切れ ${tp}（両者）</span></div>${mr}<div>🔄 勝者 → 待機 ／ 敗者 → 次の試合へ</div>`;
+}
+
+let rulesOpen = true;
+function toggleRules() {
+  rulesOpen = !rulesOpen;
+  document.getElementById('rules-body').style.display = rulesOpen ? 'block' : 'none';
+  document.getElementById('rules-toggle').textContent = rulesOpen ? '▲ 閉じる' : '▼ 開く';
+}
+
+// ===== RENDER =====
+function renderAll() { renderScoreboard(); renderMatches(); renderHistory(); if(gameMode==='count') renderMatchCounter(); }
+
+function renderMatchCounter() {
+  const p = history.length;
+  document.getElementById('played-count').textContent = p;
+  document.getElementById('match-progress-fill').style.width = Math.min(p/totalMatchLimit*100, 100)+'%';
+}
+
+function renderScoreboard() {
+  const c = document.getElementById('scoreboard');
+  const sorted = [...players].sort((a,b) => {
+    if(gameMode==='goal') { if(a.finished&&b.finished) return a.finishRank-b.finishRank; if(a.finished) return -1; if(b.finished) return 1; }
+    return b.points-a.points || b.wins-a.wins;
+  });
+  c.innerHTML = sorted.map((p,i) => {
+    const rn = (gameMode==='goal' && p.finished) ? p.finishRank : i+1;
+    const rc = rn===1?'gold':rn===2?'silver':rn===3?'bronze':'';
+    const medals = ['','🥇','🥈','🥉'];
+    const medal = (gameMode==='goal' && p.finished && rn<=3) ? medals[rn] : '';
+    let progHtml = '';
+    if(gameMode==='goal') {
+      const pr = Math.min(Math.max(p.points/p.goal*100,0),100);
+      progHtml = `<div class="point-goal">/ ${p.goal} pt</div><div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${pr}%"></div></div>`;
+    } else { progHtml = `<div class="point-goal">pt</div>`; }
+    return `<div class="scoreboard-entry ${(gameMode==='goal'&&p.finished)?'finished':''}">
+      <div class="rank ${rc}">${medal||rn}</div>
+      <div class="player-info"><div class="player-name-display">${p.name} ${(gameMode==='goal'&&p.finished)?'✅':''}</div>
+        <div class="player-stats">${p.wins}勝 ${p.losses}敗${p.timeouts>0?' <span style="color:var(--accent-red);">⏰'+p.timeouts+'</span>':''}</div></div>
+      <div class="point-display"><div class="point-current">${p.points}</div>${progHtml}</div></div>`;
+  }).join('');
+}
+
+function renderMatches() {
+  const ma = document.getElementById('match-area'), wa = document.getElementById('waiting-area');
+  if(matches.length === 0) {
+    const isEnd = (gameMode==='goal' && getActivePlayers().length<=1) || (gameMode==='count' && history.length>=totalMatchLimit);
+    if(isEnd) { ma.innerHTML='<div style="text-align:center;color:var(--text-secondary);font-size:0.85rem;padding:12px;">全試合終了！</div>'; wa.innerHTML=''; return; }
+  }
+  const sm = [...matches].sort((a,b) => a.table-b.table);
+  ma.innerHTML = sm.map(m => {
+    const p1=players[m.p1], p2=players[m.p2];
+    const imP1 = (myName === p1.name);
+    const imP2 = (myName === p2.name);
+    const imInMatch = imP1 || imP2;
+
+    // Win buttons: only show "I won" button for the current user
+    let actionsHtml = '';
+    if(imP1) {
+      actionsHtml = `<button class="btn btn-win" onclick="reportWin(${m.id},${m.p1})" style="width:100%">🏆 勝った！</button>`;
+    } else if(imP2) {
+      actionsHtml = `<button class="btn btn-win" onclick="reportWin(${m.id},${m.p2})" style="width:100%">🏆 勝った！</button>`;
+    } else {
+      actionsHtml = `<div style="text-align:center;color:var(--text-secondary);font-size:0.75rem;padding:8px;">👀 対戦中...</div>`;
+    }
+
+    // Timeout: either player in the match can report
+    let timeoutHtml = '';
+    if(imInMatch) {
+      timeoutHtml = `<button class="btn btn-timeout" onclick="reportTimeout(${m.id})">⏰ 時間切れ（両者 ${timeoutPt}pt）</button>`;
+    }
+
+    return `<div class="match-card"><div class="match-table-label">TABLE ${m.table}</div>
+      <div class="match-vs"><div class="match-player${imP1?' style="border:2px solid var(--accent-gold);box-shadow:0 0 10px rgba(255,215,0,0.2);"':''}">${p1.name}${imP1?' 🫵':''}</div><div class="vs-text">VS</div><div class="match-player${imP2?' style="border:2px solid var(--accent-gold);box-shadow:0 0 10px rgba(255,215,0,0.2);"':''}">${p2.name}${imP2?' 🫵':''}</div></div>
+      <div class="match-actions">${actionsHtml}</div>${timeoutHtml}</div>`;
+  }).join('');
+  if(waitingQueue.length > 0) {
+    wa.innerHTML = `<div class="waiting-area"><div class="waiting-label">⏳ 待機中（次戦の順）</div><div class="waiting-name">${waitingQueue.map(id=>players[id].name).join(' → ')}</div></div>`;
+  } else { wa.innerHTML = ''; }
+}
+
+function renderHistory() {
+  const c = document.getElementById('history-area');
+  if(history.length === 0) { c.innerHTML='<div style="font-size:0.8rem;color:var(--text-secondary);text-align:center;padding:8px;">まだ対戦がありません</div>'; return; }
+  c.innerHTML = [...history].reverse().map((h,i) => {
+    if(h.type==='timeout') { const p1=players[h.p1],p2=players[h.p2];
+      return `<div class="history-item" style="background:rgba(255,71,87,0.05);"><div class="history-num">#${history.length-i}</div><span style="color:var(--accent-red);font-weight:700;">⏰</span><span class="history-loser">${p1.name}</span><span style="color:var(--text-secondary);font-size:0.7rem;">&</span><span class="history-loser">${p2.name}</span><span style="margin-left:auto;font-size:0.7rem;color:var(--accent-red);">${timeoutPt}pt</span></div>`; }
+    const w=players[h.winner], l=players[h.loser];
+    return `<div class="history-item"><div class="history-num">#${history.length-i}</div><span class="history-winner">${w.name}</span><span style="color:var(--text-secondary);font-size:0.75rem;">🏆 vs</span><span class="history-loser">${l.name}</span><span style="margin-left:auto;font-size:0.7rem;color:var(--text-secondary);">${h.winnerPts}pt</span></div>`;
+  }).join('');
+}
+
+// ===== TOAST =====
+function showToast(msg, type) {
+  const t = document.createElement('div');
+  t.className = 'toast' + (type==='error' ? ' toast-error' : '');
+  t.textContent = msg;
+  document.body.appendChild(t); setTimeout(() => t.remove(), 2200);
+}
+
+// ===== FINISH =====
+function showFinish() {
+  const emojis = ['👑','🥈','🥉','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣'];
+  const order = gameMode==='goal' ? finishOrder : [...players].sort((a,b) => b.points-a.points || b.wins-a.wins).map(p => p.id);
+  document.getElementById('finish-ranking').innerHTML = order.map((pid,i) => {
+    const p = players[pid]; const tot=p.wins+p.losses; const to=p.timeouts>0?` ⏰${p.timeouts}`:'';
+    return `<div class="finish-rank-row" style="animation-delay:${0.1+i*0.2}s"><span class="crown">${emojis[i]||''}</span>
+      <div style="text-align:left;"><div style="font-weight:900;font-size:1.1rem;">${p.name}</div>
+      <div style="font-size:0.75rem;color:var(--text-secondary);margin-top:2px;"><span style="color:var(--accent-gold);font-weight:700;">${p.points}pt</span> ／${tot}戦 <span style="color:var(--accent-green);">${p.wins}勝</span> <span style="color:var(--accent-red);">${p.losses}敗</span>${to}</div></div></div>`;
+  }).join('');
+  document.getElementById('finish-overlay').classList.remove('hidden');
+  spawnConfetti();
+}
+
+function spawnConfetti() {
+  const colors = ['#ffd700','#ff4757','#3742fa','#2ed573','#a855f7','#ff6b81','#70a1ff'];
+  for(let i=0;i<60;i++) {
+    const el = document.createElement('div'); el.className='confetti-piece';
+    el.style.left=Math.random()*100+'vw'; el.style.background=colors[Math.floor(Math.random()*colors.length)];
+    el.style.animationDelay=Math.random()*2+'s'; el.style.animationDuration=(2+Math.random()*2)+'s';
+    el.style.borderRadius=Math.random()>.5?'50%':'2px';
+    el.style.width=(4+Math.random()*8)+'px'; el.style.height=(4+Math.random()*8)+'px';
+    document.body.appendChild(el); setTimeout(()=>el.remove(),4000);
+  }
+}
+
+// ===== RESET =====
+function resetRoom() {
+  if(!confirm('リセットしますか？ルームを閉じてトップに戻ります。')) return;
+  if(roomRef) roomRef.remove();
+  if(roomRef) roomRef.off();
+  roomRef = null;
+  document.getElementById('finish-overlay').classList.add('hidden');
+  document.getElementById('undo-bar').style.display = 'none';
+  showScreen('top-phase');
+}
+
+// ===== INIT =====
+showScreen('top-phase');
+</script>
+</body>
+</html>
